@@ -54,10 +54,11 @@ def DataSet_Values(args):
     return dataloaders,validloader,testloader,image_datasets,valid_datasets,test_datasets
 
 
-def Train(model,dataloader,validloader,criterion,optimizer,epochs,print_every,device='cpu'):
+def Train(args,model,dataloader,validloader,criterion,optimizer,epochs,device='cpu'):
     
     i = 0
     Training_Loss=0
+    print_every=40
     if device and torch.cuda.is_available():
         model.cuda()
     else:
@@ -107,16 +108,16 @@ def Train(model,dataloader,validloader,criterion,optimizer,epochs,print_every,de
     return model
 
 def Model_Architecture(args):
-    dataloaders=DataSet_Values(args)
-    if args.arch=='vgg': 
+    dataloaders,validloader=DataSet_Values(args)
+    if args.arch=='vgg':
         model=models.vgg16(pretrained=True)
+        Initial_Input = model.classifier[0].in_features
     elif args.arch=='densenet':
         model=models.densenet121(pretrained=True)
-
+        Initial_Input = model.classifier.in_features
     for param in model.parameters():
         param.requires_grad = False
-
-    Initial_Input = model.classifier[0].in_features
+    
     classifier = nn.Sequential(OrderedDict([
                               ('fc1', nn.Linear(Initial_Input,512)),
                               ('relu', nn.ReLU()),
@@ -136,7 +137,7 @@ def Model_Architecture(args):
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.classifier.parameters(),lr=args.lr)
-    model = Train(model,dataloader,validloader,criterion,optimizer,epochs,print_every,device='cpu')
+    model = Train(args,model,dataloader,validloader,criterion,optimizer,args.epochs,device='cpu')
 
     model.class_to_idx=trainloader.dataset.class_to_idx
     model.epochs=args.epochs
