@@ -87,6 +87,7 @@ def predict(args, image_path, model, class_to_idx, idx_to_class, cat_to_name, to
     Top_Class = [idx_to_class[x] for x in Top_Index]
     Probability = PS[Top_Index]
 
+    print("Probability is : {} \n Top class is : {}".format(Probability, Top_Class))
     return Probability, Top_Class
 
 if __name__ == "__main__":
