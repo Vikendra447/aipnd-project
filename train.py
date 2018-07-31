@@ -108,7 +108,8 @@ def Train(args,model,dataloader,validloader,criterion,optimizer,epochs,device='c
     return model
 
 def Model_Architecture(args):
-    dataloaders,validloader=DataSet_Values(args)
+    #dataloaders,validloader=DataSet_Values(args)
+    dataloaders,validloader,testloader,image_datasets,valid_datasets,test_datasets=DataSet_Values(args)
     if args.arch=='vgg':
         model=models.vgg16(pretrained=True)
         Initial_Input = model.classifier[0].in_features
@@ -137,9 +138,9 @@ def Model_Architecture(args):
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.classifier.parameters(),lr=args.lr)
-    model = Train(args,model,dataloader,validloader,criterion,optimizer,args.epochs,device='cpu')
+    model = Train(args,model,dataloaders,validloader,criterion,optimizer,args.epochs,device='cpu')
 
-    model.class_to_idx=trainloader.dataset.class_to_idx
+    model.class_to_idx=dataloadrs.dataset.class_to_idx
     model.epochs=args.epochs
     checkpoint={'input_size':[3,224,224],
                   'batch_size':trainloader.batch_size,
