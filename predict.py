@@ -43,13 +43,12 @@ def load_checkpoint(filepath):
 
     checkpoint_provided = torch.load(args.saved_model)
     if checkpoint_provided['arch'] == 'vgg':
-        model = models.vgg16()        
+        model = models.vgg16()  
+        initial_input= model.classifier[0].in_features
     elif checkpoint_provided['arch'] == 'densenet':
         model = models.densenet121()
+        initial_input= model.classifier.in_features
         
-    checkpoint = torch.load(filepath)
-    model = models.vgg16()
-    initial_input= model.classifier[0].in_features
     classifier = nn.Sequential(OrderedDict([
                               ('fc1', nn.Linear(initial_input, 512)),
                               ('relu', nn.ReLU()),
