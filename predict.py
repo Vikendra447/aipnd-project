@@ -19,7 +19,7 @@ def process_image(image):
     '''
     
     # TODO: Process a PIL image for use in a PyTorch model
-    Image_Size=256,256
+    Image_Size=256
     image.thumbnail(Image_Size, Image.ANTIALIAS)
     image=image.crop((128 - 112,128-112,128+112,128 + 112))
     My_Image = np.array(image)
