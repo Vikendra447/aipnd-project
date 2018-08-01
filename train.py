@@ -53,9 +53,6 @@ def DataSet_Values(args):
     dataloaders['train']=torch.utils.data.DataLoader(image_datasets['train'],batch_size=64,shuffle=True)
     dataloaders['valid']=torch.utils.data.DataLoader(image_datasets['valid'],batch_size=32)
     dataloaders['test']=torch.utils.data.DataLoader(image_datasets['test'],batch_size=32)
-
-    dataset_sizes={x: len(image_datasets[x]) for x in ['train', 'valid', 'test']}
-    class_names=image_datasets['train'].classes
     return dataloaders,image_datasets
 
 def train(args,model, criterion, optimizer, epochs):
@@ -144,10 +141,10 @@ def Model_Architecture(args):
     optimizer = optim.Adam(model.classifier.parameters(),lr=args.lr)
     model = Train(args,model,criterion,optimizer,args.epochs)
 
-    model.class_to_idx=dataloadrs.dataset.class_to_idx
+    model.class_to_idx=dataloadrs['train'].dataset.class_to_idx
     model.epochs=args.epochs
     checkpoint={'input_size':[3,224,224],
-                  'batch_size':trainloader.batch_size,
+                  'batch_size':dataloaders['train'].batch_size,
                   'output_size':102,
                   'arch':args.arch,
                   'state_dict':model.state_dict(),
