@@ -19,23 +19,26 @@ def process_image(image):
     '''
     
     # TODO: Process a PIL image for use in a PyTorch model
-    my_imj=Image.open(image)
-    my_imj.resize(256,256)
-    x1=(my_imj.size-224)/2
-    x2=(my_imj.size-224)/2
-    x3=(my_imj.size+224)/2
-    x4=(my_imj.size+224)/2
-    my_imj=my_imj.crop((x1,x2,x3,x4))
+    Image_Size=256,256
+    image.thumbnail(Image_Size, Image.ANTIALIAS)
+    image=image.crop((128 - 112,128-112,128+112,128 + 112))
+    My_Image = np.array(image)
+    My_Image = My_Image/255
+        
+    X1=My_Image[:,:,0]
+    X2=My_Image[:,:,1]
+    X3=My_Image[:,:,2]
     
-    mean = np.array([0.485,0.456,0.406])
-    std = np.array([0.229, 0.224, 0.225])
+    X1=(X1-0.485)/(0.229) 
+    X2=(X2-0.456)/(0.224)
+    X3=(X3-0.406)/(0.225)
     
-    np_image = np.array(image_raw, dtype=np.float64)
-    np_image = np_image / 255.0
-    np_image = (np_image - mean) / std
-    new_image = np_image.transpose(2,0,1)
+    My_Image[:,:,0]=X1
+    My_Image[:,:,1]=X2
+    My_Image[:,:,2]=X3
     
-    return torch.from_numpy(new_image)
+    My_Image = np.transpose(My_Image, (2,0,1))
+    return My_Image
 
 
 # TODO: load the checkpoint
