@@ -41,75 +41,79 @@ def DataSet_Values(args):
                                                            [0.229, 0.224, 0.225])])
 
     # TODO: Load the datasets with ImageFolder
+    image_datasets = dict()
+    image_datasets['train']=datasets.ImageFolder(train_dir,transform=data_transforms)
+    image_datasets['valid']=datasets.ImageFolder(valid_dir,transform=valid_transforms)
+    image_datasets['test']=datasets.ImageFolder(test_dir,transform=test_transforms)
 
-    image_datasets = datasets.ImageFolder(data_dir + '/train', transform=data_transforms)
-    valid_datasets = datasets.ImageFolder(data_dir + '/valid', transform=valid_transforms)
-    test_datasets = datasets.ImageFolder(data_dir + '/test', transform=test_transforms)
 
     # TODO: Using the image datasets and the trainforms, define the dataloaders
 
-    dataloaders = torch.utils.data.DataLoader(image_datasets, batch_size=64, shuffle=True)
-    validloader = torch.utils.data.DataLoader(valid_datasets, batch_size=32)
-    testloader = torch.utils.data.DataLoader(test_datasets, batch_size=32)
-    return dataloaders,validloader,testloader,image_datasets,valid_datasets,test_datasets
+    dataloaders = dict()
+    dataloaders['train']=torch.utils.data.DataLoader(image_datasets['train'],batch_size=64,shuffle=True)
+    dataloaders['valid']=torch.utils.data.DataLoader(image_datasets['valid'],batch_size=32)
+    dataloaders['test']=torch.utils.data.DataLoader(image_datasets['test'],batch_size=32)
 
+    dataset_sizes={x: len(image_datasets[x]) for x in ['train', 'valid', 'test']}
+    class_names=image_datasets['train'].classes
+    return dataloaders,image_datasets
 
-def Train(args,model,dataloader,validloader,criterion,optimizer,epochs,device='cpu'):
-    
-    i = 0
-    Training_Loss=0
+def train(args,model, criterion, optimizer, epochs):
+    dataloaders,image_datasets=DataSet_Values(args)
+    i=0
     print_every=40
-    if device and torch.cuda.is_available():
+    Running_Loss=0
+    if torch.cuda.is_available():
+        print('GPU TRAINING')
         model.cuda()
+    elif torch.cuda.is_available() == False:
+        print('GPU processing')
     else:
-        print('Go without cuda')
-    for e in range(epochs):
+        print('CPU TESTING')
+        
+    for e in range(epochs):  
         model.train()
-        for Images,Labels in iter(dataloader):
+        for Images,Labels in iter(dataloaders['train']):
             i += 1
-            
-            if device and torch.cuda.is_available():
-                Images = Images.cuda()
-                Labels = Labels.cuda()
-            else:
-                Images =Variable(Images)
-                Labels =Variable(Labels)
+            Images,Labels=Variable(Images),Variable(Labels)
+            if torch.cuda.is_available():
+                Images,Labels=Images.cuda(),Labels.cuda()
             optimizer.zero_grad()
-            Result = model.forward(Images)
-            Loss_Value = criterion( Result, Labels)
-            Loss_Value.backward()
+            Result=model.forward(Images)
+            Loss = criterion(Result, Labels)
+            Loss.backward()
             optimizer.step()
-            Training_Loss += loss.data.item()
+            Running_Loss += Loss.data.item()
+            
             if i % print_every == 0:
                 model.eval()
                 Accuracy=0
                 Valid_Loss=0
-                for Images, Labels in iter(validloader):
-            
-                    if device and torch.cuda.is_available():
-                        Images =Images.cuda()
-                        Labels = Labels.cuda()
-                    else:
-                        Images = Variable(Images)
-                        Labels =  Variable(Labels)
-                    with torch.no_grad():
-                        Result = model.forward(Images)
-                        Valid_Loss=criterion( Result, Labels).data.item()
-                        Prob = torch.exp( Result).data
-                        Equality = (Labels.data == Prob.max(1)[1])
-                        Accuracy += Equality.type_as(torch.FloatTensor()).mean()
 
+                for Images,Labels in iter(dataloaders['valid']):
+                    Images,Labels=Variable(Images),Variable(Labels)
+                    if torch.cuda.is_available():
+                        Images,Labels=Images.cuda(),Labels.cuda()
+                    with torch.no_grad():
+                        Result=model.forward(Images)
+                        Valid_Loss += criterion(Result,Labels).data.item()
+                        PS=torch.exp(Result).data
+                        Equality=(Labels.data == PS.max(1)[1])
+                        Accuracy += Equality.type_as(torch.FloatTensor()).mean()
+        
                 print("Epoch: {}/{}.. ".format(e+1, epochs),
-                      "Training Loss: {:.3f}.. ".format(Training_Loss/print_every),
-                      "Valid Loss: {:.3f}.. ".format(Valid_Loss/len(validloader)),
-                      "Accuracy: {:.3f}".format(Accuracy/len(validloader)))
-                running_loss = 0
+                 "Training Loss: {:.3f}.. ".format(Running_Loss/print_every),
+                  "Valid Loss: {:.3f}.. ".format(Valid_Loss/len(dataloaders['valid'])),
+                  "Valid Accuracyuracy: {:.3f}".format(Accuracy/len(dataloaders['valid'])))  
+    
+                Running_Loss = 0
                 model.train()
+            
+    print('{} EPOCHS COMPLETE. MODEL TRAINED.'.format(epochs))
     return model
 
 def Model_Architecture(args):
-    #dataloaders,validloader=DataSet_Values(args)
-    dataloaders,validloader,testloader,image_datasets,valid_datasets,test_datasets=DataSet_Values(args)
+    dataloaders,validloader=DataSet_Values(args)
     if args.arch=='vgg':
         model=models.vgg16(pretrained=True)
         Initial_Input = model.classifier[0].in_features
@@ -138,7 +142,7 @@ def Model_Architecture(args):
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.classifier.parameters(),lr=args.lr)
-    model = Train(args,model,dataloaders,validloader,criterion,optimizer,args.epochs,device='cpu')
+    model = Train(args,model,criterion,optimizer,args.epochs)
 
     model.class_to_idx=dataloadrs.dataset.class_to_idx
     model.epochs=args.epochs
